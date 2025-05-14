@@ -1,0 +1,6 @@
+Number         Name of Item       
+1              Eggs
+2              Bread
+3              Coke
+4              Biscuits
+5              Chocolate
