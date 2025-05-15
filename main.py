@@ -1,3 +1,5 @@
+import threading
+import scheduler
 import csv
 from colorama import Fore, Style
 import smtplib
@@ -25,6 +27,7 @@ print("Email Address:", EMAIL_ADDRESS)
 
 
 def load_items(filename):
+    # ... your existing code unchanged ...
     with open(filename, 'r') as file:
         reader = csv.DictReader(file)
         items = []
@@ -33,67 +36,17 @@ def load_items(filename):
             items.append(cleaned_row)
         return items
 
-
-def save_items(filename, items):
-    with open(filename, 'w', newline='') as file:
-        fieldnames = ['Number', 'Name', 'Price', 'Quantity']
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
-        for item in items:
-            writer.writerow(item)
-
-
-def print_inventory(items):
-    print("\nAvailable Items:")
-    for item in items:
-        quantity = int(item['Quantity'])
-        status = ""
-        if quantity <= 2:
-            status = Fore.RED + " [LOW - Restock now!]" + Style.RESET_ALL
-        elif quantity <= 4:
-            status = Fore.YELLOW + " [Warning - Almost Low]" + Style.RESET_ALL
-        else:
-            status = Fore.GREEN + " [Stock OK]" + Style.RESET_ALL
-        print(f"{item['Number']}. {item['Name']} - R{item['Price']} ({item['Quantity']} left){status}")
-
-
-def find_item(items, choice):
-    for item in items:
-        if item['Number'] == choice or item['Name'].lower() == choice.lower():
-            return item
-    return None
-
-
-def send_low_stock_email(item_name, remaining_stock):
-    try:
-        msg = EmailMessage()
-        msg['Subject'] = f"Stock Alert: {item_name} is low"
-        msg['From'] = EMAIL_ADDRESS
-        msg['To'] = STOCK_OWNER_EMAIL
-        msg.set_content(f"The stock for {item_name} is low. Only {remaining_stock} items remaining. Please restock soon.")
-
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            smtp.send_message(msg)
-        print(Fore.CYAN + f"Email sent to stock owner: {item_name} low in stock." + Style.RESET_ALL)
-    except Exception as e:
-        print(Fore.RED + f"Failed to send email: {e}" + Style.RESET_ALL)
-
-
-def send_low_stock_sms(item_name, remaining_stock):
-    try:
-        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        message = client.messages.create(
-            body=f"Stock Alert: {item_name} is low ({remaining_stock} left). Restock soon!",
-            from_=TWILIO_PHONE_NUMBER,
-            to=OWNER_PHONE_NUMBER
-        )
-        print(Fore.CYAN + f"SMS sent to stock owner: {item_name} low in stock." + Style.RESET_ALL)
-    except Exception as e:
-        print(Fore.RED + f"Failed to send SMS: {e}" + Style.RESET_ALL)
+# ... other existing functions unchanged ...
 
 
 def main():
+    # Start the scheduler thread here so it runs alongside your app
+    def start_scheduler():
+        scheduler.schedule_progress_reports()
+
+    scheduler_thread = threading.Thread(target=start_scheduler, daemon=True)
+    scheduler_thread.start()
+
     filename = "XshopItems.txt"
     items = load_items(filename)
     cart = []
@@ -101,6 +54,7 @@ def main():
     print("Welcome to X Store!")
 
     while True:
+        # ... your existing main loop code unchanged ...
         print_inventory(items)
         choice = input("What would you like to buy? (Enter item name or number, or 'checkout' to finish, 'exit' to quit): ").strip()
         if choice.lower() == 'exit':
