@@ -1,6 +1,7 @@
-Number         Name of Item       
-1              Eggs
-2              Bread
-3              Coke
-4              Biscuits
-5              Chocolate
+
+Number,Name of Item,Price,Quantity
+1,Eggs,5.00,6
+2,Bread,7.00,6
+3,Coke,11.00,6
+4,Biscuits,1.50,6
+5,Chocolate,4.50,6
