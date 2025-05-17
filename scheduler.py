@@ -18,4 +18,4 @@ def schedule_progress_reports():
         schedule.run_pending()
         time.sleep(1)
 
-# Do NOT run scheduler here when imported — will be managed in main.py
+

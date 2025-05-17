@@ -1,131 +1,192 @@
+import csv
+import json
+import os
 import threading
 import scheduler
-import csv
 from colorama import Fore, Style
-import smtplib
-from email.message import EmailMessage
 from twilio.rest import Client
+from email.message import EmailMessage
 from dotenv import load_dotenv
-import os
+import smtplib
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
-
-# Now get the environment variables
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 OWNER_PHONE_NUMBER = os.getenv("OWNER_PHONE_NUMBER")
-
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 STOCK_OWNER_EMAIL = os.getenv("STOCK_OWNER_EMAIL")
 
-# Print to verify they're loaded
-print("Twilio SID:", TWILIO_ACCOUNT_SID)
-print("Email Address:", EMAIL_ADDRESS)
-
-
-def load_items(filename):
-    # ... your existing code unchanged ...
-    with open(filename, 'r') as file:
-        reader = csv.DictReader(file)
-        items = []
+# Convert CSV to JSON
+def convert_csv_to_json(csv_file, json_file):
+    items = []
+    with open(csv_file, 'r') as f:
+        reader = csv.DictReader(f)
         for row in reader:
-            cleaned_row = {k.strip(): v.strip() for k, v in row.items() if k and v}
-            items.append(cleaned_row)
-        return items
+            item = {
+                'Name': row['Name'],
+                'Price': float(row['Price']),
+                'Quantity': int(row['Quantity'])
+            }
+            items.append(item)
 
-# ... other existing functions unchanged ...
+    with open(json_file, 'w') as f:
+        json.dump(items, f, indent=4)
 
+# Load items from JSON
+def load_items(json_file):
+    with open(json_file, 'r') as f:
+        return json.load(f)
+
+# Save items back to JSON
+def save_items(json_file, items):
+    with open(json_file, 'w') as f:
+        json.dump(items, f, indent=4)
+
+# Find an item by number or name
+def find_item(items, choice):
+    if choice.isdigit():
+        idx = int(choice) - 1
+        if 0 <= idx < len(items):
+            return items[idx]
+    else:
+        for item in items:
+            if item['Name'].lower() == choice.lower():
+                return item
+    return None
+
+# Display inventory with color-coded stock levels
+def print_inventory(items):
+    print("\nAvailable Inventory:")
+    for idx, item in enumerate(items, start=1):
+        quantity = item['Quantity']
+        if quantity > 4:
+            color = Fore.GREEN
+        elif 2 <= quantity <= 4:
+            color = Fore.YELLOW
+        else:
+            color = Fore.RED
+        print(f"{idx}. {item['Name']} - R{item['Price']} ({color}{quantity} in stock{Style.RESET_ALL})")
+
+# Email alert
+def send_low_stock_email(name, quantity):
+    try:
+        msg = EmailMessage()
+        msg['Subject'] = f"Low Stock Alert: {name}"
+        msg['From'] = EMAIL_ADDRESS
+        msg['To'] = STOCK_OWNER_EMAIL
+        msg.set_content(f"Stock Alert: Only {quantity} {name}(s) left in store.")
+
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            smtp.send_message(msg)
+        print(Fore.CYAN + "Low stock email sent." + Style.RESET_ALL)
+    except Exception as e:
+        print(Fore.RED + f"Failed to send email: {e}" + Style.RESET_ALL)
+
+# SMS alert
+def send_low_stock_sms(name, quantity):
+    try:
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        body = f"Stock Alert: Only {quantity} {name}(s) left."
+        client.messages.create(
+            body=body,
+            from_=TWILIO_PHONE_NUMBER,
+            to=OWNER_PHONE_NUMBER
+        )
+        print(Fore.CYAN + "Low stock SMS sent." + Style.RESET_ALL)
+    except Exception as e:
+        print(Fore.RED + f"Failed to send SMS: {e}" + Style.RESET_ALL)
 
 def main():
-    # Start the scheduler thread here so it runs alongside your app
+    # Start scheduler
     def start_scheduler():
         scheduler.schedule_progress_reports()
+    threading.Thread(target=start_scheduler, daemon=True).start()
 
-    scheduler_thread = threading.Thread(target=start_scheduler, daemon=True)
-    scheduler_thread.start()
+    # File paths
+    csv_file = "XshopItems.txt"
+    json_file = "XshopItems.json"
 
-    filename = "XshopItems.txt"
-    items = load_items(filename)
+    # Convert if JSON doesn't exist yet
+    if not os.path.exists(json_file):
+        convert_csv_to_json(csv_file, json_file)
+
+    # Load items
+    items = load_items(json_file)
     cart = []
 
     print("Welcome to X Store!")
 
     while True:
-        # ... your existing main loop code unchanged ...
         print_inventory(items)
-        choice = input("What would you like to buy? (Enter item name or number, or 'checkout' to finish, 'exit' to quit): ").strip()
+        choice = input("\nEnter item number or name ('checkout' or 'exit'): ").strip()
         if choice.lower() == 'exit':
-            print("Thanks for visiting X Store. Goodbye!")
+            print("Thank you for shopping with us!")
             break
         elif choice.lower() == 'checkout':
             if not cart:
                 print("Your cart is empty.")
                 continue
-            print("\n--- Your Receipt ---")
-            total = 0.0
+            print("\n--- Receipt ---")
+            total = 0
             for c in cart:
-                line_total = float(c['Price']) * c['Quantity']
+                line_total = c['Price'] * c['Quantity']
                 total += line_total
-                print(f"{c['Quantity']} x {c['Name']} @ R{c['Price']} each = R{line_total:.2f}")
-            print(f"Total: R{total:.2f}")
-            print("---------------------\n")
+                print(f"{c['Quantity']} x {c['Name']} @ R{c['Price']} = R{line_total:.2f}")
+            print(f"Total: R{total:.2f}\n----------------\n")
             cart.clear()
-            save_items(filename, items)
+            save_items(json_file, items)
             continue
 
         item = find_item(items, choice)
         if not item:
-            print("Item not found. Try again.")
+            print("Item not found.")
             continue
 
         try:
-            quantity = int(input(f"How many {item['Name']}s would you like to buy? "))
+            quantity = int(input(f"How many {item['Name']}s? "))
             if quantity <= 0:
-                print("Quantity must be at least 1.")
+                print("Quantity must be positive.")
                 continue
         except ValueError:
-            print("Please enter a valid number.")
+            print("Invalid number.")
             continue
 
-        available = int(item['Quantity'])
-        if quantity > available:
-            print(f"Sorry, only {available} left.")
+        if quantity > item['Quantity']:
+            print(f"Sorry, only {item['Quantity']} in stock.")
             continue
 
-        found_in_cart = False
+        # Update cart
         for c in cart:
             if c['Name'] == item['Name']:
                 c['Quantity'] += quantity
-                found_in_cart = True
                 break
-        if not found_in_cart:
+        else:
             cart.append({'Name': item['Name'], 'Price': item['Price'], 'Quantity': quantity})
 
-        item['Quantity'] = str(available - quantity)
-        print(f"Added {quantity} {item['Name']}(s) to your cart.")
+        item['Quantity'] -= quantity
+        print(f"Added {quantity} {item['Name']}(s) to cart.")
 
-        remaining = int(item['Quantity'])
-        if remaining <= 2:
-            send_low_stock_email(item['Name'], remaining)
-            send_low_stock_sms(item['Name'], remaining)
+        if item['Quantity'] <= 2:
+            send_low_stock_email(item['Name'], item['Quantity'])
+            send_low_stock_sms(item['Name'], item['Quantity'])
 
             restock = input(f"{item['Name']} is low. Restock? (yes/no): ").strip().lower()
             if restock == 'yes':
                 try:
-                    restock_amount = int(input("Enter restock quantity: "))
+                    restock_amount = int(input("Enter restock amount: "))
                     if restock_amount > 0:
-                        item['Quantity'] = str(remaining + restock_amount)
+                        item['Quantity'] += restock_amount
                         print(f"{item['Name']} now has {item['Quantity']} in stock.")
                     else:
-                        print("Restock amount must be positive. Skipping restock.")
+                        print("Invalid restock quantity.")
                 except ValueError:
-                    print("Invalid number. Skipping restock.")
+                    print("Invalid number.")
 
-        save_items(filename, items)
-
+        save_items(json_file, items)
 
 if __name__ == "__main__":
     main()

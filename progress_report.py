@@ -9,7 +9,7 @@ from colorama import Fore, Style
 
 load_dotenv()
 
-# Environment variables
+
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")        
@@ -20,16 +20,16 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 STOCK_OWNER_EMAIL = os.getenv("STOCK_OWNER_EMAIL")
 
 def send_progress_report():
-    # Customize your progress report message here
+    
     subject = "Your Scheduled Progress Report"
     body = "Hello! Here's your breathing app progress update for today."
 
-    # Send Email
+    
     try:
         msg = EmailMessage()
         msg['Subject'] = subject
         msg['From'] = EMAIL_ADDRESS
-        msg['To'] = EMAIL_ADDRESS  # or whoever should get it
+        msg['To'] = EMAIL_ADDRESS 
         msg.set_content(body)
 
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:

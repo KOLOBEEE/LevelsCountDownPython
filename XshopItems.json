@@ -1,0 +1,27 @@
+[
+    {
+        "Name": "Eggs",
+        "Price": 5.0,
+        "Quantity": 19
+    },
+    {
+        "Name": "Bread",
+        "Price": 7.0,
+        "Quantity": 6
+    },
+    {
+        "Name": "Coke",
+        "Price": 11.0,
+        "Quantity": 6
+    },
+    {
+        "Name": "Biscuits",
+        "Price": 1.5,
+        "Quantity": 2
+    },
+    {
+        "Name": "Chocolate",
+        "Price": 4.5,
+        "Quantity": 6
+    }
+]

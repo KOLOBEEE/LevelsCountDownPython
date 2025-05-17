@@ -23,3 +23,19 @@ PythonProject
 - there will be 5 items each.
 - so every time an item is bought, it gets subtracted. when it reaches certain colour, it issues a notification
 - and when the item is added, it will recount the whole line and change the colour as well. 
+
+
+# Security
+- we will use double security system. that is the owner and manger can login but both will have different login pages. 
+- the manager will only have access to certain things and will require the owner password to make changes to the pages.
+- the manager will need owners password to be able to add/ remove / edit items.
+- everytime the manager logs in, there must be a notification to the owner and telling him/her what the manager was doing on the web  
+
+# Appearance
+- there will be three screens
+- screen 1; the owner can be able to see the the shop(that is what is being sold, added and the remaining stock.)
+- screen 2; the manager will be able to get notifications along with the owner on the stock levels
+- screen 3; this is what the employee uses to transact. 
+- so there is multiple reporting here, three dimensional. 
+
+
